@@ -1,0 +1,45 @@
+name: study_ai_app
+description: AI-powered study assistant with voice interaction
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Networking
+  http: ^1.1.0
+  dio: ^5.4.0
+  
+  # Real-time Communication
+  agora_rtc_engine: ^6.3.0
+  socket_io_client: ^2.0.3+1
+  
+  # Storage
+  shared_preferences: ^2.2.2
+  
+  # Permissions
+  permission_handler: ^11.0.1
+  
+  # UI
+  flutter_svg: ^2.0.9
+  lottie: ^3.0.0
+  shimmer: ^3.0.0
+  
+  # Utils
+  intl: ^0.18.1
+  uuid: ^4.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
