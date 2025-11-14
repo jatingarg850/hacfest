@@ -88,6 +88,17 @@ exports.getSession = async (req, res) => {
   }
 };
 
+// Query agent status
+exports.queryAgentStatus = async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const agentStatus = await agoraService.queryAgent(agentId);
+    res.json({ agent: agentStatus });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Helper function to generate system prompt
 function generateSystemPrompt(user, currentPage) {
   let prompt = `You are a helpful Study AI assistant for ${user.name}. `;

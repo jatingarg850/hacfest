@@ -28,29 +28,27 @@ class AgoraService {
         remote_rtc_uids: ['*'],
         enable_string_uid: false,
         idle_timeout: 300, // 5 minutes
+        enable_greeting: true,
         llm: {
-          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`,
+          url: `${process.env.PROXY_SERVER_URL || 'http://localhost:3001'}/v1/chat/completions`,
           system_messages: [
             {
-              parts: [{ text: systemPrompt }],
-              role: 'user',
+              role: 'system',
+              content: systemPrompt || 'You are a helpful study assistant chatbot.'
             },
           ],
-          max_history: 32,
-          greeting_message: 'Hello! I am your Study AI assistant. How can I help you today?',
+          max_history: 10,
+          greeting_message: 'Hello! How can I help you study today?',
           failure_message: 'Sorry, I did not catch that. Could you please repeat?',
           params: {
-            model: 'gemini-pro',
+            model: 'gemini-1.5-flash',
             temperature: 0.7,
             max_tokens: 150,
           },
-          style: 'gemini',
-          prompt_template: 'You are a helpful study assistant. User said: {input}. Respond naturally and helpfully.',
         },
         asr: {
           vendor: 'ares',
           language: 'en-US',
-          continuous_recognition: true,
         },
         tts: {
           vendor: 'elevenlabs',
@@ -89,6 +87,7 @@ class AgoraService {
       console.log('Agent ID:', response.data.agent_id);
       console.log('Status:', response.data.status);
       console.log('⏳ Agent is now listening for user speech...');
+      console.log('📊 Full response:', JSON.stringify(response.data, null, 2));
       
       return response.data;
     } catch (error) {

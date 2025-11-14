@@ -20,6 +20,7 @@ router.get('/auth/me', auth, authController.getMe);
 router.post('/voice/start', auth, agoraController.startVoiceSession);
 router.post('/voice/stop', auth, agoraController.stopVoiceSession);
 router.get('/voice/session/:id', auth, agoraController.getSession);
+router.get('/voice/agent/:agentId/status', auth, agoraController.queryAgentStatus);
 
 // Intent classification
 router.post('/intent/classify', auth, intentController.classifyUserIntent);
