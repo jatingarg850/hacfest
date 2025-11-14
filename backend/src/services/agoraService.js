@@ -41,12 +41,16 @@ class AgoraService {
           failure_message: 'Sorry, I did not catch that. Could you please repeat?',
           params: {
             model: 'gemini-pro',
+            temperature: 0.7,
+            max_tokens: 150,
           },
           style: 'gemini',
+          prompt_template: 'You are a helpful study assistant. User said: {input}. Respond naturally and helpfully.',
         },
         asr: {
           vendor: 'ares',
           language: 'en-US',
+          continuous_recognition: true,
         },
         tts: {
           vendor: 'elevenlabs',
@@ -69,7 +73,7 @@ class AgoraService {
       console.log('  - Token (first 20 chars):', token.substring(0, 20) + '...');
       console.log('  - App ID:', this.appId);
       console.log('  - ASR: ARES (en-US)');
-      console.log('  - LLM: Gemini Pro');
+      console.log('  - LLM: Gemini 1.5 Flash (streaming)');
       console.log('  - TTS: ElevenLabs (Sarah)');
       console.log('  - Greeting:', payload.properties.llm.greeting_message);
       console.log('📦 Full payload:', JSON.stringify(payload, null, 2));

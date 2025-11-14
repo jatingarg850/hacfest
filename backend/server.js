@@ -46,20 +46,38 @@ io.on('connection', (socket) => {
     socket.userName = userName;
     socket.roomId = roomId;
     
-    console.log(`${userName} joined room: ${roomId}`);
+    console.log(`👤 ${userName} (${userId}) joined room: ${roomId}`);
     
     // Send recent messages
-    const messages = await Message.find({ roomId })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .populate('userId', 'name');
-    
-    socket.emit('previous-messages', messages.reverse());
+    try {
+      const messages = await Message.find({ roomId })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(); // Convert to plain objects
+      
+      const messagesArray = messages.reverse().map(msg => ({
+        _id: msg._id.toString(),
+        roomId: msg.roomId,
+        userId: msg.userId,
+        userName: msg.userName,
+        content: msg.content,
+        type: msg.type,
+        createdAt: msg.createdAt,
+      }));
+      
+      console.log(`📜 Sending ${messagesArray.length} previous messages to ${userName}`);
+      socket.emit('previous-messages', messagesArray);
+    } catch (error) {
+      console.error('❌ Error loading messages:', error);
+      socket.emit('previous-messages', []);
+    }
   });
 
   // Send message
   socket.on('send-message', async ({ roomId, content, type = 'text' }) => {
     try {
+      console.log('📨 Received message:', { roomId, userId: socket.userId, userName: socket.userName, content });
+      
       const message = new Message({
         roomId,
         userId: socket.userId,
@@ -70,9 +88,22 @@ io.on('connection', (socket) => {
       
       await message.save();
       
-      io.to(roomId).emit('new-message', message);
+      // Convert to plain object for sending
+      const messageObj = {
+        _id: message._id.toString(),
+        roomId: message.roomId,
+        userId: message.userId,
+        userName: message.userName,
+        content: message.content,
+        type: message.type,
+        createdAt: message.createdAt,
+      };
+      
+      console.log('✅ Broadcasting message to room:', roomId);
+      io.to(roomId).emit('new-message', messageObj);
     } catch (error) {
-      console.error('Message error:', error);
+      console.error('❌ Message error:', error);
+      socket.emit('message-error', { error: error.message });
     }
   });
 

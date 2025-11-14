@@ -1,47 +1,29 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
-class NewsScreen
-    extends
-        StatefulWidget {
+class NewsScreen extends StatefulWidget {
   const NewsScreen({
     Key? key,
   }) : super(
-         key: key,
-       );
+          key: key,
+        );
 
   @override
-  State<
-    NewsScreen
-  >
-  createState() => _NewsScreenState();
+  State<NewsScreen> createState() => _NewsScreenState();
 }
 
-class _NewsScreenState
-    extends
-        State<
-          NewsScreen
-        > {
-  final ApiService
-  _api = ApiService();
-  List<
-    dynamic
-  >
-  _news = [];
-  bool
-  _isLoading = true;
+class _NewsScreenState extends State<NewsScreen> {
+  final ApiService _api = ApiService();
+  List<dynamic> _news = [];
+  bool _isLoading = true;
 
   @override
-  void
-  initState() {
+  void initState() {
     super.initState();
     _loadNews();
   }
 
-  Future<
-    void
-  >
-  _loadNews() async {
+  Future<void> _loadNews() async {
     try {
       final response = await _api.get(
         '/news',
@@ -52,9 +34,7 @@ class _NewsScreenState
           _isLoading = false;
         },
       );
-    } catch (
-      e
-    ) {
+    } catch (e) {
       setState(
         () => _isLoading = false,
       );
@@ -62,8 +42,7 @@ class _NewsScreenState
   }
 
   @override
-  Widget
-  build(
+  Widget build(
     BuildContext context,
   ) {
     if (_isLoading) {
@@ -79,17 +58,38 @@ class _NewsScreenState
           16,
         ),
         itemCount: _news.length,
-        itemBuilder:
-            (
-              context,
-              index,
-            ) {
-              final article = _news[index];
-              return Card(
-                margin: const EdgeInsets.only(
-                  bottom: 16,
-                ),
-                child: Padding(
+        itemBuilder: (
+          context,
+          index,
+        ) {
+          final article = _news[index];
+          return Card(
+            margin: const EdgeInsets.only(
+              bottom: 16,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (article['imageUrl'] != null)
+                  Image.network(
+                    article['imageUrl'],
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 200,
+                        color: Colors.grey.shade200,
+                        child: const Icon(
+                          Icons.image,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  ),
+                Padding(
                   padding: const EdgeInsets.all(
                     16.0,
                   ),
@@ -108,21 +108,32 @@ class _NewsScreenState
                       ),
                       Text(
                         article['summary'],
-                        style: const TextStyle(
-                          color: Colors.grey,
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          height: 1.5,
                         ),
                       ),
                       const SizedBox(
-                        height: 8,
+                        height: 12,
                       ),
                       Row(
                         children: [
                           Chip(
                             label: Text(
                               article['category'],
+                              style: const TextStyle(fontSize: 12),
                             ),
-                            backgroundColor: Colors.blue.shade50,
+                            backgroundColor: _getCategoryColor(article['category']),
                           ),
+                          const SizedBox(width: 8),
+                          if (article['readTime'] != null)
+                            Text(
+                              article['readTime'],
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
                           const Spacer(),
                           Text(
                             _formatDate(
@@ -138,19 +149,35 @@ class _NewsScreenState
                     ],
                   ),
                 ),
-              );
-            },
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  String
-  _formatDate(
+  String _formatDate(
     String date,
   ) {
     final dt = DateTime.parse(
       date,
     );
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+}
+
+Color _getCategoryColor(String category) {
+  switch (category) {
+    case 'study-tips':
+      return Colors.green.shade100;
+    case 'technology':
+      return Colors.blue.shade100;
+    case 'education':
+      return Colors.purple.shade100;
+    case 'health':
+      return Colors.orange.shade100;
+    default:
+      return Colors.grey.shade100;
   }
 }

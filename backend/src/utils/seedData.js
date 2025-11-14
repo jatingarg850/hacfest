@@ -1,4 +1,6 @@
 const Quiz = require('../models/Quiz');
+const Flashcard = require('../models/Flashcard');
+const User = require('../models/User');
 
 // Sample quizzes for testing
 const sampleQuizzes = [
@@ -89,4 +91,69 @@ async function seedQuizzes() {
   }
 }
 
-module.exports = { seedQuizzes };
+async function seedFlashcards() {
+  try {
+    // Get a user to assign flashcards to (or create a demo user)
+    let user = await User.findOne({ email: 'admin@example.com' });
+    
+    if (!user) {
+      console.log('⚠️ No user found, skipping flashcard seeding');
+      return;
+    }
+
+    // Clear existing flashcards for this user
+    await Flashcard.deleteMany({ userId: user._id });
+
+    const sampleFlashcards = [
+      {
+        userId: user._id,
+        front: 'What is the capital of France?',
+        back: 'Paris',
+        subject: 'Geography',
+        reviewCount: 3,
+      },
+      {
+        userId: user._id,
+        front: 'What is the formula for the area of a circle?',
+        back: 'A = πr²',
+        subject: 'Mathematics',
+        reviewCount: 5,
+      },
+      {
+        userId: user._id,
+        front: 'What is photosynthesis?',
+        back: 'The process by which plants convert light energy into chemical energy (glucose)',
+        subject: 'Biology',
+        reviewCount: 2,
+      },
+      {
+        userId: user._id,
+        front: 'What is Newton\'s Second Law?',
+        back: 'F = ma (Force equals mass times acceleration)',
+        subject: 'Physics',
+        reviewCount: 4,
+      },
+      {
+        userId: user._id,
+        front: 'What is the chemical symbol for water?',
+        back: 'H₂O',
+        subject: 'Chemistry',
+        reviewCount: 6,
+      },
+      {
+        userId: user._id,
+        front: 'What is a variable in programming?',
+        back: 'A named storage location that holds a value which can change during program execution',
+        subject: 'Computer Science',
+        reviewCount: 1,
+      },
+    ];
+
+    await Flashcard.insertMany(sampleFlashcards);
+    console.log('✅ Sample flashcards seeded successfully');
+  } catch (error) {
+    console.error('❌ Error seeding flashcards:', error);
+  }
+}
+
+module.exports = { seedQuizzes, seedFlashcards };
