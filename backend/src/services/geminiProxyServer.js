@@ -78,34 +78,54 @@ app.post('/v1/chat/completions', async (req, res) => {
     
     console.log('✅ Gemini response:', text.substring(0, 100));
     
-    // Send in OpenAI-compatible SSE format
-    const chunk = {
-      id: 'chatcmpl-' + Date.now(),
-      object: 'chat.completion.chunk',
-      created: Math.floor(Date.now() / 1000),
-      model: model,
-      choices: [{
-        index: 0,
-        delta: { content: text },
-        finish_reason: null
-      }]
-    };
+    // Send in OpenAI-compatible SSE format - stream word by word
+    const words = text.split(' ');
+    const id = 'chatcmpl-' + Date.now();
+    const created = Math.floor(Date.now() / 1000);
     
-    res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i] + (i < words.length - 1 ? ' ' : '');
+      const chunk = {
+        id,
+        object: 'chat.completion.chunk',
+        created,
+        model,
+        choices: [{
+          index: 0,
+          delta: { content: word },
+          finish_reason: null
+        }]
+      };
+      
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      
+      // Small delay between words to simulate streaming
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
     
-    // Send final chunk
+    // Send final chunk with usage stats
     const finalChunk = {
-      ...chunk,
+      id,
+      object: 'chat.completion.chunk',
+      created,
+      model,
       choices: [{
         index: 0,
         delta: {},
         finish_reason: 'stop'
-      }]
+      }],
+      usage: {
+        prompt_tokens: 50,
+        completion_tokens: words.length,
+        total_tokens: 50 + words.length
+      }
     };
     
     res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
     res.write('data: [DONE]\n\n');
     res.end();
+    
+    console.log('✅ Streaming complete - sent', words.length, 'words');
     
   } catch (error) {
     console.error('❌ Proxy error:', error.message);

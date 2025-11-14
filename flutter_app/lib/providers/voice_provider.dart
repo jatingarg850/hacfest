@@ -33,10 +33,13 @@ class VoiceProvider with ChangeNotifier {
           },
           onUserJoined: (connection, remoteUid, elapsed) async {
             debugPrint('✅ AI Agent joined: $remoteUid');
-            // Explicitly unmute the AI agent's audio
+            // CRITICAL: Explicitly unmute and set volume for AI agent (UID 999)
             if (remoteUid == 999) {
-              debugPrint('🔊 Unmuting AI agent audio...');
+              debugPrint('🔊 Unmuting AI agent audio and setting playback volume...');
               await _agoraService.unmuteRemoteAudio(remoteUid);
+              await _agoraService.setRemotePlaybackVolume(remoteUid, 100);
+              await _agoraService.adjustPlaybackSignalVolume(100);
+              debugPrint('✅ AI agent audio fully enabled: unmuted + volume=100');
             }
           },
           onUserOffline: (connection, remoteUid, reason) {
@@ -62,8 +65,20 @@ class VoiceProvider with ChangeNotifier {
           onAudioDeviceStateChanged: (deviceId, deviceType, deviceState) {
             debugPrint('🎤 Audio device: $deviceType state: $deviceState');
           },
-          onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) {
+          onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) async {
             debugPrint('🔊 Remote audio (AI): UID=$remoteUid state=$state reason=$reason');
+
+            // Handle remote mute state - CRITICAL FIX
+            if (remoteUid == 999 && state == RemoteAudioState.remoteAudioStateStopped) {
+              if (reason == RemoteAudioStateReason.remoteAudioReasonRemoteMuted) {
+                debugPrint('⚠️  AI agent reported as muted - forcing unmute!');
+                await _agoraService.unmuteRemoteAudio(remoteUid);
+                await _agoraService.setRemotePlaybackVolume(remoteUid, 100);
+              } else if (reason == RemoteAudioStateReason.remoteAudioReasonNoPacketReceive) {
+                debugPrint('⚠️  No audio packets from AI - check TTS/LLM config');
+              }
+            }
+
             if (state == RemoteAudioState.remoteAudioStateDecoding) {
               debugPrint('✅ AI is speaking!');
             }

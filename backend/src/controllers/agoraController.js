@@ -101,22 +101,6 @@ exports.queryAgentStatus = async (req, res) => {
 
 // Helper function to generate system prompt
 function generateSystemPrompt(user, currentPage) {
-  let prompt = `You are a helpful Study AI assistant for ${user.name}. `;
-  
-  prompt += `Current page: ${currentPage}. `;
-  
-  if (user.studyPlan) {
-    prompt += `The user has an active study plan. `;
-  }
-  
-  prompt += `You help students with:
-- Answering academic questions
-- Explaining concepts clearly
-- Providing study tips
-- Navigating the app (quiz, flashcards, news, community, study planner)
-- Creating and managing study plans
-
-Be friendly, encouraging, and act like a helpful senior in college. Keep responses concise and clear.`;
-
-  return prompt;
+  // CRITICAL: Keep prompt VERY brief for fast TTS triggering
+  return `You are a voice-first study assistant for ${user.name}. Current page: ${currentPage}. Intents: open quiz, open flashcards, open news, open community, search, back. When intent is clear, emit a JSON tool call first, then say a short confirmation. Keep all answers under 20 words.`;
 }

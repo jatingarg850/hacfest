@@ -65,6 +65,14 @@ class AgoraService {
       debugPrint('Channel: $_channelName');
       debugPrint('UID: $_uid');
 
+      // CRITICAL: Set audio route to speaker BEFORE joining
+      try {
+        await _engine!.setDefaultAudioRouteToSpeakerphone(true);
+        debugPrint('🔊 Audio route set to speakerphone');
+      } catch (e) {
+        debugPrint('⚠️  Could not set speaker route (may not be supported): $e');
+      }
+
       // CRITICAL: Enable local audio BEFORE joining
       debugPrint('🎤 Enabling local audio...');
       await _engine!.enableLocalAudio(true);
@@ -90,6 +98,15 @@ class AgoraService {
 
       _isJoined = true;
       debugPrint('✅ Successfully joined channel');
+
+      // Pre-emptively unmute agent UID 999 in case it joins before event fires
+      Future.delayed(const Duration(milliseconds: 500), () async {
+        if (_engine != null && _isJoined) {
+          await _engine!.muteRemoteAudioStream(uid: 999, mute: false);
+          await _engine!.adjustUserPlaybackSignalVolume(uid: 999, volume: 100);
+          debugPrint('✅ Pre-emptive unmute for agent UID 999 completed');
+        }
+      });
 
       return response;
     } catch (e) {
@@ -156,6 +173,20 @@ class AgoraService {
     if (_engine != null) {
       await _engine!.muteRemoteAudioStream(uid: uid, mute: false);
       debugPrint('✅ Unmuted remote audio for UID: $uid');
+    }
+  }
+
+  Future<void> setRemotePlaybackVolume(int uid, int volume) async {
+    if (_engine != null) {
+      await _engine!.adjustUserPlaybackSignalVolume(uid: uid, volume: volume);
+      debugPrint('✅ Set remote playback volume for UID $uid to $volume');
+    }
+  }
+
+  Future<void> adjustPlaybackSignalVolume(int volume) async {
+    if (_engine != null) {
+      await _engine!.adjustPlaybackSignalVolume(volume);
+      debugPrint('✅ Set overall playback volume to $volume');
     }
   }
 

@@ -20,31 +20,63 @@ class AgoraService {
     console.log('API URL:', url);
     
     const payload = {
-      name: `agent_${userId}_${Date.now()}`,
+      name: `voice_nav_agent_${userId}_${Date.now()}`,
       properties: {
         channel: channelName,
         token: token,
         agent_rtc_uid: agentUid.toString(),
         remote_rtc_uids: ['*'],
         enable_string_uid: false,
-        idle_timeout: 300, // 5 minutes
+        idle_timeout: 300,
         enable_greeting: true,
         llm: {
-          url: `${process.env.PROXY_SERVER_URL || 'http://localhost:3001'}/v1/chat/completions`,
+          url: `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`,
           system_messages: [
             {
-              role: 'system',
-              content: systemPrompt || 'You are a helpful study assistant chatbot.'
+              parts: [
+                {
+                  text: systemPrompt || 'You are a voice-first study assistant. Intents: open, back, search, quiz, flashcard, news, community. When intent is clear, emit a JSON tool call first with minimal parameters, then say a short confirmation. Keep answers brief.'
+                }
+              ],
+              role: 'user',
             },
           ],
-          max_history: 10,
-          greeting_message: 'Hello! How can I help you study today?',
-          failure_message: 'Sorry, I did not catch that. Could you please repeat?',
+          greeting_message: 'Hi! What would you like to do?',
+          failure_message: 'Please say that again.',
+          max_history: 16,
           params: {
             model: 'gemini-1.5-flash',
             temperature: 0.7,
-            max_tokens: 150,
+            maxOutputTokens: 80,
+            tools: [
+              {
+                type: 'function',
+                function: {
+                  name: 'navigate',
+                  description: 'App navigation and actions.',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      action: {
+                        type: 'string',
+                        enum: ['open', 'back', 'search', 'quiz', 'flashcard', 'news', 'community']
+                      },
+                      target: {
+                        type: 'string'
+                      },
+                      value: {
+                        type: 'string'
+                      }
+                    },
+                    required: ['action']
+                  }
+                }
+              }
+            ],
+            tool_choice: 'auto'
           },
+          style: 'gemini',
+          ignore_empty: true,
         },
         asr: {
           vendor: 'ares',
@@ -54,26 +86,30 @@ class AgoraService {
           vendor: 'elevenlabs',
           params: {
             key: process.env.ELEVENLABS_API_KEY,
-            model_id: process.env.ELEVENLABS_MODEL_ID,
+            model_id: 'eleven_flash_v2_5',
             voice_id: process.env.ELEVENLABS_VOICE_ID,
             sample_rate: 24000,
-            speed: 1.0,
           },
         },
       },
     };
 
     try {
-      console.log('📤 Sending request to Agora...');
+      console.log('📤 Sending BLUEPRINT configuration to Agora...');
       console.log('📋 Agent Configuration:');
       console.log('  - Channel:', channelName);
       console.log('  - Agent UID:', agentUid);
-      console.log('  - Token (first 20 chars):', token.substring(0, 20) + '...');
       console.log('  - App ID:', this.appId);
+      console.log('  - Enable Greeting:', payload.properties.enable_greeting);
       console.log('  - ASR: ARES (en-US)');
-      console.log('  - LLM: Gemini 1.5 Flash (streaming)');
-      console.log('  - TTS: ElevenLabs (Sarah)');
-      console.log('  - Greeting:', payload.properties.llm.greeting_message);
+      console.log('  - LLM: Gemini 1.5 Flash (v1, direct SSE, style=gemini, parts-based)');
+      console.log('  - TTS: ElevenLabs eleven_flash_v2_5 @ 24kHz');
+      console.log('  - Voice ID:', payload.properties.tts.params.voice_id);
+      console.log('  - Greeting Message:', payload.properties.llm.greeting_message);
+      console.log('  - Max Tokens:', payload.properties.llm.params.maxOutputTokens);
+      console.log('  - Tools:', payload.properties.llm.params.tools?.length || 0, 'functions');
+      console.log('  - Tool Choice:', payload.properties.llm.params.tool_choice);
+      console.log('  - Ignore Empty:', payload.properties.llm.ignore_empty);
       console.log('📦 Full payload:', JSON.stringify(payload, null, 2));
       
       const response = await axios.post(url, payload, {
@@ -88,6 +124,16 @@ class AgoraService {
       console.log('Status:', response.data.status);
       console.log('⏳ Agent is now listening for user speech...');
       console.log('📊 Full response:', JSON.stringify(response.data, null, 2));
+      
+      // Query agent status after 3 seconds to get internal logs
+      setTimeout(async () => {
+        try {
+          const statusResponse = await this.queryAgent(response.data.agent_id);
+          console.log('📊 Agent Status Check:', JSON.stringify(statusResponse, null, 2));
+        } catch (error) {
+          console.error('❌ Failed to query agent status:', error.message);
+        }
+      }, 3000);
       
       return response.data;
     } catch (error) {
