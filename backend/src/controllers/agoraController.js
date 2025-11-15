@@ -101,6 +101,6 @@ exports.queryAgentStatus = async (req, res) => {
 
 // Helper function to generate system prompt
 function generateSystemPrompt(user, currentPage) {
-  // CRITICAL: Keep prompt VERY brief for fast TTS triggering
-  return `You are a voice-first study assistant for ${user.name}. Current page: ${currentPage}. Intents: open quiz, open flashcards, open news, open community, search, back. When intent is clear, emit a JSON tool call first, then say a short confirmation. Keep all answers under 20 words.`;
+  // Simple conversational prompt for natural responses
+  return `You are a friendly study assistant helping ${user.name}. You're currently on the ${currentPage} page. Answer questions naturally and keep responses brief (1-2 sentences). Be helpful and encouraging.`;
 }

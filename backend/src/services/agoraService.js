@@ -30,50 +30,22 @@ class AgoraService {
         idle_timeout: 300,
         enable_greeting: true,
         llm: {
-          url: `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`,
+          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`,
           system_messages: [
             {
               parts: [
                 {
-                  text: systemPrompt || 'You are a voice-first study assistant. Intents: open, back, search, quiz, flashcard, news, community. When intent is clear, emit a JSON tool call first with minimal parameters, then say a short confirmation. Keep answers brief.'
+                  text: systemPrompt || 'You are a helpful voice assistant for a study app. Keep responses very brief and conversational. Answer questions directly in 1-2 sentences.'
                 }
               ],
               role: 'user',
             },
           ],
-          greeting_message: 'Hi! What would you like to do?',
-          failure_message: 'Please say that again.',
-          max_history: 16,
+          greeting_message: 'Hello',
+          failure_message: 'Sorry, I did not understand that.',
+          max_history: 20,
           params: {
-            model: 'gemini-1.5-flash',
-            temperature: 0.7,
-            maxOutputTokens: 80,
-            tools: [
-              {
-                type: 'function',
-                function: {
-                  name: 'navigate',
-                  description: 'App navigation and actions.',
-                  parameters: {
-                    type: 'object',
-                    properties: {
-                      action: {
-                        type: 'string',
-                        enum: ['open', 'back', 'search', 'quiz', 'flashcard', 'news', 'community']
-                      },
-                      target: {
-                        type: 'string'
-                      },
-                      value: {
-                        type: 'string'
-                      }
-                    },
-                    required: ['action']
-                  }
-                }
-              }
-            ],
-            tool_choice: 'auto'
+            model: 'gemini-2.0-flash',
           },
           style: 'gemini',
           ignore_empty: true,
@@ -89,26 +61,30 @@ class AgoraService {
             model_id: 'eleven_flash_v2_5',
             voice_id: process.env.ELEVENLABS_VOICE_ID,
             sample_rate: 24000,
+            stability: 0.85,
+            similarity_boost: 0.9,
+            style: 0.6,
+            speed: 1.0,
+            use_speaker_boost: true,
           },
         },
       },
     };
 
     try {
-      console.log('📤 Sending BLUEPRINT configuration to Agora...');
+      console.log('📤 Sending configuration to Agora...');
       console.log('📋 Agent Configuration:');
       console.log('  - Channel:', channelName);
       console.log('  - Agent UID:', agentUid);
       console.log('  - App ID:', this.appId);
       console.log('  - Enable Greeting:', payload.properties.enable_greeting);
       console.log('  - ASR: ARES (en-US)');
-      console.log('  - LLM: Gemini 1.5 Flash (v1, direct SSE, style=gemini, parts-based)');
-      console.log('  - TTS: ElevenLabs eleven_flash_v2_5 @ 24kHz');
+      console.log('  - LLM: Gemini 2.0 Flash (v1beta, SSE streaming)');
+      console.log('  - TTS: ElevenLabs eleven_flash_v2_5 @ 24kHz (enhanced quality)');
       console.log('  - Voice ID:', payload.properties.tts.params.voice_id);
+      console.log('  - TTS Settings: stability=0.85, similarity=0.9, style=0.6, speaker_boost=true');
       console.log('  - Greeting Message:', payload.properties.llm.greeting_message);
       console.log('  - Max Tokens:', payload.properties.llm.params.maxOutputTokens);
-      console.log('  - Tools:', payload.properties.llm.params.tools?.length || 0, 'functions');
-      console.log('  - Tool Choice:', payload.properties.llm.params.tool_choice);
       console.log('  - Ignore Empty:', payload.properties.llm.ignore_empty);
       console.log('📦 Full payload:', JSON.stringify(payload, null, 2));
       
@@ -122,18 +98,53 @@ class AgoraService {
       console.log('✅ Agent created successfully!');
       console.log('Agent ID:', response.data.agent_id);
       console.log('Status:', response.data.status);
-      console.log('⏳ Agent is now listening for user speech...');
+      console.log('');
+      console.log('═'.repeat(60));
+      console.log('🎤 AGENT IS NOW LIVE AND LISTENING');
+      console.log('═'.repeat(60));
+      console.log('');
+      console.log('What happens next:');
+      console.log('  1. User speaks → ASR transcribes to text');
+      console.log('  2. Text → Gemini LLM processes');
+      console.log('  3. Gemini response → ElevenLabs TTS');
+      console.log('  4. TTS audio → Plays to user');
+      console.log('');
+      console.log('⚠️  NOTE: Conversation content is NOT sent to this backend.');
+      console.log('   The dialogue happens directly in the Agora RTC channel.');
+      console.log('   See CONVERSATION_LOGGING.md for details.');
+      console.log('');
       console.log('📊 Full response:', JSON.stringify(response.data, null, 2));
       
-      // Query agent status after 3 seconds to get internal logs
+      // Query agent status multiple times to monitor initialization
+      const agentId = response.data.agent_id;
+      
       setTimeout(async () => {
         try {
-          const statusResponse = await this.queryAgent(response.data.agent_id);
-          console.log('📊 Agent Status Check:', JSON.stringify(statusResponse, null, 2));
+          const status1 = await this.queryAgent(agentId);
+          console.log('📊 Agent Status (3s):', JSON.stringify(status1, null, 2));
         } catch (error) {
           console.error('❌ Failed to query agent status:', error.message);
         }
       }, 3000);
+      
+      setTimeout(async () => {
+        try {
+          const status2 = await this.queryAgent(agentId);
+          console.log('📊 Agent Status (6s):', JSON.stringify(status2, null, 2));
+          
+          if (status2.status === 'RUNNING') {
+            console.log('');
+            console.log('✅ Agent is fully operational and ready!');
+            console.log('');
+            console.log('💬 CONVERSATION IS HAPPENING NOW (if user is speaking)');
+            console.log('   Check Flutter app logs to see audio state changes');
+            console.log('   Look for: "AI IS SPEAKING!" in Flutter console');
+            console.log('');
+          }
+        } catch (error) {
+          console.error('❌ Failed to query agent status:', error.message);
+        }
+      }, 6000);
       
       return response.data;
     } catch (error) {

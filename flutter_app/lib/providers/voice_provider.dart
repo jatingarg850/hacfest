@@ -30,17 +30,36 @@ class VoiceProvider with ChangeNotifier {
         RtcEngineEventHandler(
           onJoinChannelSuccess: (connection, elapsed) {
             debugPrint('✅ Successfully joined channel: ${connection.channelId}');
+            debugPrint('🔊 Setting up audio for AI agent...');
+            // Aggressively unmute and set volume for agent
+            Future.delayed(const Duration(milliseconds: 1000), () async {
+              debugPrint('🔊 Force unmuting UID 999 (1s delay)');
+              await _agoraService.unmuteRemoteAudio(999);
+              await _agoraService.setRemotePlaybackVolume(999, 100);
+              await _agoraService.adjustPlaybackSignalVolume(400);
+            });
+            Future.delayed(const Duration(milliseconds: 2000), () async {
+              debugPrint('🔊 Force unmuting UID 999 (2s delay)');
+              await _agoraService.unmuteRemoteAudio(999);
+              await _agoraService.setRemotePlaybackVolume(999, 100);
+            });
+            Future.delayed(const Duration(milliseconds: 3000), () async {
+              debugPrint('🔊 Force unmuting UID 999 (3s delay)');
+              await _agoraService.unmuteRemoteAudio(999);
+              await _agoraService.setRemotePlaybackVolume(999, 100);
+            });
           },
           onUserJoined: (connection, remoteUid, elapsed) async {
-            debugPrint('✅ AI Agent joined: $remoteUid');
-            // CRITICAL: Explicitly unmute and set volume for AI agent (UID 999)
-            if (remoteUid == 999) {
-              debugPrint('🔊 Unmuting AI agent audio and setting playback volume...');
-              await _agoraService.unmuteRemoteAudio(remoteUid);
-              await _agoraService.setRemotePlaybackVolume(remoteUid, 100);
-              await _agoraService.adjustPlaybackSignalVolume(100);
-              debugPrint('✅ AI agent audio fully enabled: unmuted + volume=100');
-            }
+            debugPrint('✅ USER JOINED EVENT: UID=$remoteUid');
+
+            // Force speaker mode when agent joins
+            await _agoraService.forceSpeakerMode();
+
+            debugPrint('🔊 Unmuting UID $remoteUid immediately...');
+            await _agoraService.unmuteRemoteAudio(remoteUid);
+            await _agoraService.setRemotePlaybackVolume(remoteUid, 100);
+            await _agoraService.adjustPlaybackSignalVolume(400);
+            debugPrint('✅ Audio fully enabled for UID $remoteUid');
           },
           onUserOffline: (connection, remoteUid, reason) {
             debugPrint('👋 AI Agent left: $remoteUid (reason: $reason)');
@@ -66,21 +85,34 @@ class VoiceProvider with ChangeNotifier {
             debugPrint('🎤 Audio device: $deviceType state: $deviceState');
           },
           onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) async {
-            debugPrint('🔊 Remote audio (AI): UID=$remoteUid state=$state reason=$reason');
+            debugPrint('🔊 REMOTE AUDIO STATE CHANGED:');
+            debugPrint('   UID: $remoteUid');
+            debugPrint('   State: $state');
+            debugPrint('   Reason: $reason');
+            debugPrint('   Elapsed: $elapsed ms');
 
-            // Handle remote mute state - CRITICAL FIX
-            if (remoteUid == 999 && state == RemoteAudioState.remoteAudioStateStopped) {
+            // Always try to unmute when we detect any remote audio
+            await _agoraService.unmuteRemoteAudio(remoteUid);
+            await _agoraService.setRemotePlaybackVolume(remoteUid, 100);
+
+            if (state == RemoteAudioState.remoteAudioStateStopped) {
+              debugPrint('⚠️  Remote audio STOPPED - reason: $reason');
               if (reason == RemoteAudioStateReason.remoteAudioReasonRemoteMuted) {
-                debugPrint('⚠️  AI agent reported as muted - forcing unmute!');
+                debugPrint('⚠️  Remote is MUTED - forcing unmute!');
                 await _agoraService.unmuteRemoteAudio(remoteUid);
                 await _agoraService.setRemotePlaybackVolume(remoteUid, 100);
               } else if (reason == RemoteAudioStateReason.remoteAudioReasonNoPacketReceive) {
-                debugPrint('⚠️  No audio packets from AI - check TTS/LLM config');
+                debugPrint('⚠️  NO PACKETS - AI may not be speaking yet');
               }
+            } else if (state == RemoteAudioState.remoteAudioStateStarting) {
+              debugPrint('🎵 Remote audio STARTING...');
+            } else if (state == RemoteAudioState.remoteAudioStateDecoding) {
+              debugPrint('✅ AI IS SPEAKING! Audio decoding...');
             }
-
-            if (state == RemoteAudioState.remoteAudioStateDecoding) {
-              debugPrint('✅ AI is speaking!');
+          },
+          onRemoteAudioStats: (connection, stats) {
+            if (stats.quality != null && stats.quality! > 0) {
+              debugPrint('📊 Remote audio stats: quality=${stats.quality} networkTransportDelay=${stats.networkTransportDelay}ms');
             }
           },
         ),
@@ -98,11 +130,13 @@ class VoiceProvider with ChangeNotifier {
   }
 
   Future<void> startVoiceSession() async {
-    if (!_isInitialized) await initialize();
-
     _error = null;
 
     try {
+      // Always reinitialize to ensure clean state
+      debugPrint('🔄 Reinitializing Agora for clean state...');
+      await initialize();
+
       debugPrint('🎙️ Starting voice session...');
       debugPrint('Current page: $_currentPage');
 

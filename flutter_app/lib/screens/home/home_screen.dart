@@ -188,10 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Study Planner',
                   ),
                   onTap: () {
-                    Navigator.pop(
-                      context,
-                    );
-                    // Navigate to study planner
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/study-planner');
                   },
                 ),
                 ListTile(

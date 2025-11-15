@@ -7,6 +7,7 @@ import 'providers/navigation_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/study_planner/study_planner_screen.dart';
 import 'widgets/permission_handler_widget.dart';
 
 void main() {
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
           AppConstants.loginRoute: (context) => const LoginScreen(),
           AppConstants.registerRoute: (context) => const RegisterScreen(),
           AppConstants.homeRoute: (context) => const HomeScreen(),
+          '/study-planner': (context) => const StudyPlannerScreen(),
         },
       ),
     );

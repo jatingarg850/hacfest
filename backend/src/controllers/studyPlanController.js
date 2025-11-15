@@ -5,8 +5,12 @@ const studyPlanGenerator = require('../services/studyPlanGenerator');
 // Create study plan
 exports.createStudyPlan = async (req, res) => {
   try {
-    const { topics, startDate, endDate, dailyStudyHours, holidays } = req.body;
+    const { topics, startDate, endDate, dailyStudyHours, holidays, breakCount } = req.body;
     const userId = req.userId;
+
+    console.log('📚 Creating study plan for user:', userId);
+    console.log('Topics:', topics);
+    console.log('Duration:', startDate, 'to', endDate);
 
     // Generate schedule using AI
     const schedule = await studyPlanGenerator.generatePlan(
@@ -14,7 +18,8 @@ exports.createStudyPlan = async (req, res) => {
       startDate,
       endDate,
       dailyStudyHours,
-      holidays
+      holidays,
+      breakCount || 2
     );
 
     // Create study plan
@@ -33,8 +38,13 @@ exports.createStudyPlan = async (req, res) => {
     // Update user reference
     await User.findByIdAndUpdate(userId, { studyPlan: studyPlan._id });
 
+    console.log('✅ Study plan created successfully!');
+    console.log('Plan ID:', studyPlan._id);
+    console.log('Schedule days:', schedule.length);
+
     res.status(201).json({ studyPlan });
   } catch (error) {
+    console.error('❌ Error creating study plan:', error);
     res.status(500).json({ error: error.message });
   }
 };
