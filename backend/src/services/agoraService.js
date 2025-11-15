@@ -35,20 +35,19 @@ class AgoraService {
             {
               parts: [
                 {
-                  text: systemPrompt || 'You are a helpful voice assistant for a study app. Keep responses very brief and conversational. Answer questions directly in 1-2 sentences.'
+                  text: 'You are a helpful chatbot'
                 }
               ],
               role: 'user',
             },
           ],
-          greeting_message: 'Hello',
-          failure_message: 'Sorry, I did not understand that.',
-          max_history: 20,
+          greeting_message: 'Good to see you!',
+          failure_message: 'Hold on a second.',
+          max_history: 32,
           params: {
             model: 'gemini-2.0-flash',
           },
           style: 'gemini',
-          ignore_empty: true,
         },
         asr: {
           vendor: 'ares',
@@ -59,13 +58,8 @@ class AgoraService {
           params: {
             key: process.env.ELEVENLABS_API_KEY,
             model_id: 'eleven_flash_v2_5',
-            voice_id: process.env.ELEVENLABS_VOICE_ID,
+            voice_id: 'pNInz6obpgDQGcFmaJgB', // Brian voice - known to work with Agora
             sample_rate: 24000,
-            stability: 0.85,
-            similarity_boost: 0.9,
-            style: 0.6,
-            speed: 1.0,
-            use_speaker_boost: true,
           },
         },
       },
@@ -136,6 +130,9 @@ class AgoraService {
             console.log('');
             console.log('✅ Agent is fully operational and ready!');
             console.log('');
+            
+
+            
             console.log('💬 CONVERSATION IS HAPPENING NOW (if user is speaking)');
             console.log('   Check Flutter app logs to see audio state changes');
             console.log('   Look for: "AI IS SPEAKING!" in Flutter console');
@@ -193,6 +190,25 @@ class AgoraService {
     } catch (error) {
       console.error('Agora query agent error:', error.response?.data || error.message);
       throw new Error('Failed to query AI agent');
+    }
+  }
+
+  // Update agent configuration
+  async updateAgent(agentId, updates) {
+    const url = `${this.baseUrl}/projects/${this.appId}/agents/${agentId}`;
+
+    try {
+      const response = await axios.patch(url, { properties: updates }, {
+        headers: {
+          'Authorization': getAgoraAuthHeader(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Agora update agent error:', error.response?.data || error.message);
+      throw new Error('Failed to update AI agent');
     }
   }
 

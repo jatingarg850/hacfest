@@ -10,6 +10,7 @@
     "proxy": "node src/services/geminiProxyServer.js"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.24.1",
     "@google/generative-ai": "^0.24.1",
     "agora-access-token": "^2.0.4",
     "axios": "^1.6.0",
